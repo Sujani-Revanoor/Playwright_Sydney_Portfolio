@@ -1,0 +1,26 @@
+# --- Python virtual environments & bytecode ---
+# Never commit local virtual environments or compiled bytecode files
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# --- Test reports, screenshots & Playwright traces ---
+# Generated locally during test runs; CI regenerates reports as artifacts
+reports/
+allure-report/
+public/
+test-results/
+
+# --- Local environment secrets ---
+# Keep real tokens, credentials, or local overrides out of version control
+.env
+
+# --- IDE & OS metadata ---
+# PyCharm workspace settings and Windows/macOS system files
+.idea/
+.DS_Store
+Thumbs.db

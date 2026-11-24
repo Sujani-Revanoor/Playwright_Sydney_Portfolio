@@ -1,0 +1,64 @@
+# GitLab CI/CD pipelines run in stages from top to bottom.
+# If a job in an earlier stage fails, later stages do not run.
+stages:
+  - test
+  - deploy
+
+# Global variables shared across jobs in this pipeline
+variables:
+  # Store pip's download cache inside the project folder so GitLab can cache it
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+# Cache downloaded Python packages between pipeline runs to speed up execution
+cache:
+  paths:
+    - .cache/pip
+
+# Job 1: Run Playwright UI and API tests inside a Linux container
+playwright_e2e:
+  stage: test
+
+  # Official Microsoft Playwright Python image already includes Python and browsers,
+  # avoiding long browser downloads on every CI run.
+  # Update the tag if you pin a specific Playwright version in requirements.txt.
+  image: mcr.microsoft.com/playwright/python:latest
+
+  script:
+    # Install Python dependencies (pytest, pytest-playwright, allure-pytest, etc.)
+    - pip install -r requirements.txt
+
+    # Run the test suite using pytest.ini defaults (-v, -n auto, allure output)
+    - pytest
+
+  # Keep test results and failure traces even if one or more tests fail
+  artifacts:
+    when: always
+    paths:
+      - reports/allure-results
+      - reports/traces
+    expire_in: 7 days
+
+# Job 2: Generate the Allure HTML report and publish it via GitLab Pages.
+# GitLab Pages specifically looks for a job named 'pages' that outputs a 'public/' folder.
+pages:
+  stage: deploy
+
+  # Image containing the 'allure' CLI tool to build the static HTML report
+  image: frankescobar/allure-docker-service:latest
+
+  # Wait for playwright_e2e to finish and bring in its saved artifacts
+  needs:
+    - job: playwright_e2e
+      artifacts: true
+
+  script:
+    # Convert raw Allure JSON results into a static HTML report inside 'public/'
+    - allure generate reports/allure-results -o public --clean
+
+  artifacts:
+    paths:
+      - public
+
+  # Only publish GitLab Pages when pushing/merging to the default branch (e.g., main)
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
