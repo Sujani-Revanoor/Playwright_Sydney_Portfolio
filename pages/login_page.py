@@ -9,6 +9,8 @@ class LoginPage:
     and makes maintenance much easier if the UI changes.
     """
 
+    DEFAULT_URL = "https://www.saucedemo.com"
+
     def __init__(self, page: Page):
         # 'page' represents a single browser tab/page in Playwright
         self.page = page
@@ -26,20 +28,28 @@ class LoginPage:
         # Matches a button with accessible name/text "Login"
         self.login_button = page.get_by_role("button", name="Login")
 
-        # Matches an element with attribute data-test="error" (common on SauceDemo)
+        # Matches the error container rendered when login fails on SauceDemo
         self.error_banner = page.locator("[data-test='error']")
 
     # @allure.step turns this method into a clearly labeled step in the Allure report
-    @allure.step("Open login page and sign in as '{username}'")
-    def login(self, username: str, password: str):
+    @allure.step("Open login page ({url}) and sign in as '{username}'")
+    def login(
+        self,
+        username: str,
+        password: str,
+        url: str = DEFAULT_URL,
+    ) -> "LoginPage":
         # Navigate to the application URL; 'domcontentloaded' waits until HTML is parsed
-        self.page.goto("https://www.saucedemo.com", wait_until="domcontentloaded")
+        self.page.goto(url, wait_until="domcontentloaded")
 
         # .fill() automatically waits for the input to be visible and enabled,
-        # clears any existing value, and types the text immediately (faster than .type())
+        # clears any existing value, and fills immediately (faster than .type())
         self.username_input.fill(username)
         self.password_input.fill(password)
 
         # .click() automatically checks actionability (visible, stable, not obscured)
-        # before clicking the button—no manual WebDriverWait or sleep needed
+        # before clicking the button
         self.login_button.click()
+
+        # Return self so callers can chain helper calls if desired
+        return self
